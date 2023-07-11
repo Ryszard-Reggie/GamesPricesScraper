@@ -3,6 +3,8 @@ import os
 import pandas as pd
 from dotenv import load_dotenv
 
+import datetime
+
 pd.set_option('display.max_rows', None)
 pd.set_option('display.max_columns', None)
 pd.set_option('display.width', None)
@@ -162,8 +164,8 @@ def insert_into_prices(data: dict):
 
     try_execute_sql(sql, values)
 
-    select_from('games')
-    select_from('prices')
+    # select_from('games')
+    # select_from('prices')
 
 
 def select_from(table_name: str):
@@ -174,6 +176,7 @@ def select_from(table_name: str):
     print(f"{table_name}:\n{pd.read_sql(sql, conn)}")
 
     conn.close()
+
 
 def if_record_exist(data: dict):
     sql = """
@@ -186,3 +189,7 @@ def if_record_exist(data: dict):
         return True
     else:
         return False
+
+
+select_from('games')
+select_from('prices')

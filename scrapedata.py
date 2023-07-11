@@ -27,6 +27,7 @@ def scrape_data_from_GOG(url: str = "https://www.gog.com/pl/game/revolt"):
 
     link = json.loads(jsondata)['offers']['url']
 
+    # Tytuł gry może się zmienić z czasem, trzeba to uwzględnić
     title = soup.find('h1', {'class': 'productcard-basics__title', 'data-cy': 'product-title'}).get_text(strip=True)
 
     base_price = soup.find('span', {'class': 'product-actions-price__base-amount'}).get_text(strip=True)
@@ -68,4 +69,4 @@ def scrape_data_from_STEAM(url: str):
     pass
 
 
-print(scrape_data_from_GOG())
+# print(scrape_data_from_GOG())

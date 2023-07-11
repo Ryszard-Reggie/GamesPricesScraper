@@ -3,6 +3,9 @@ from tkinter import ttk
 from tkinter import messagebox
 
 import sqlite3
+from datetime import datetime, date
+
+import pandas as pd
 
 from scrapedata import scrape_data_from_GOG
 from sqlitedb import insert_into_games, insert_into_prices, create_table, select_data, try_execute_sql, if_record_exist
@@ -34,10 +37,12 @@ class App(tk.Tk):
 
         self.crate_db_if_not_exists()
 
+        self.check_prices()
+
         self.creating_window()
         self.grid()
 
-    def masseges(self,title: str, message: str):
+    def masseges(self, title: str, message: str):
         """
         Metoda do wyietlania komunikatów???
         :return:
@@ -45,7 +50,41 @@ class App(tk.Tk):
         messagebox.showinfo(title, message)
 
 
-    def dispaly_data(self):
+    def check_prices(self):
+        """
+        Nazwa jeszcze do przemyślenia
+        Wraz z startem apki potrzebny jest system do aktualizacji cen
+        Jeżeli aktualizacja była robiona danego dnia to nie ma potrzeby robić jej ponownie
+        Podobny skrypt użyć do przycisku odśwież???
+        :return:
+        """
+
+        sql = """
+            SELECT g.link, MAX(datetime(p.checked_date, 'localtime')) AS checked
+            FROM prices AS p
+            INNER JOIN games AS g ON p.game_id = g.id
+            GROUP BY g.link
+            ORDER BY checked DESC;
+        """
+
+        data = select_data(sql)
+
+        data = pd.DataFrame(data[1], columns=data[0]).values.tolist()
+
+        for link, last_check_date in data:
+            print(f"{link} - {last_check_date}")
+
+        for link, last_check_date in data:
+            last_check_date = datetime.strptime(last_check_date, '%Y-%m-%d %H:%M:%S').date()
+            today = date.today()
+
+            if last_check_date != today:
+                game_data = scrape_data_from_GOG(str(link))
+                insert_into_prices(game_data)
+            else:
+                print(f"Gra {link} była już dziś aktualizowana przy starcie.")
+
+    def display_data(self):
         """
             Metoda do wyświetlenia danych w oknie aplikacji
         """
@@ -55,7 +94,9 @@ class App(tk.Tk):
         sql = """
             SELECT g.title, g.release, datetime(g.added, 'localtime') AS added, p.base_price, p.currency
             FROM games AS g
-            LEFT JOIN prices AS p ON g.id = p.game_id;
+            INNER JOIN prices AS p ON g.id = p.game_id
+            GROUP BY g.title
+            ORDER BY g.title;
         """
 
         columns, data = select_data(sql)
@@ -83,12 +124,11 @@ class App(tk.Tk):
             insert_into_prices(gama_data)
             self.add_new_row_to_tree_view(gama_data)
 
-
     def add_new_row_to_tree_view(self, data):
         sql = """
-            SELECT DISTINCT g.title, g.release, datetime(g.added, 'localtime') AS added, p.base_price, p.currency
+            SELECT g.title, g.release, datetime(g.added, 'localtime') AS added, p.base_price, p.currency
             FROM games AS g
-            LEFT JOIN prices AS p ON g.id = p.game_id
+            INNER JOIN prices AS p ON g.id = p.game_id
             WHERE g.title = ? OR g.title LIKE ?;
         """
 
@@ -152,7 +192,7 @@ class App(tk.Tk):
         table_lf.grid(padx=2, pady=2, ipadx=2, ipady=2, sticky='ew')
 
         # Zdefiniowanie kolumn
-        columns, data = self.dispaly_data()
+        columns, data = self.display_data()
 
         self.tree = ttk.Treeview(table_lf, columns=columns, show='headings')
 
