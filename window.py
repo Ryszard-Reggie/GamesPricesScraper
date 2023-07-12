@@ -2,7 +2,6 @@ import tkinter as tk
 from tkinter import ttk
 from tkinter import messagebox
 
-import sqlite3
 from datetime import datetime, date
 
 import pandas as pd
@@ -50,12 +49,35 @@ class App(tk.Tk):
         messagebox.showinfo(title, message)
 
 
+    def refresh_prices(self):
+        """
+        Zastanowić się nad lepszą nazwą...
+        Metoda do ręcznego odświeżania cen gier
+        :return:
+        """
+
+        sql = """
+            SELECT g.id, g.link
+            FROM games AS g
+            GROUP BY g.link
+            ORDER BY g.id;
+        """
+
+        links = select_data(sql)
+
+        links = pd.DataFrame(links[1], columns=links[0]).values.tolist()
+
+        print(links)
+
+        for _, link in links:
+            game_data = scrape_data_from_GOG(str(link))
+            insert_into_prices(game_data)
+
     def check_prices(self):
         """
         Nazwa jeszcze do przemyślenia
         Wraz z startem apki potrzebny jest system do aktualizacji cen
         Jeżeli aktualizacja była robiona danego dnia to nie ma potrzeby robić jej ponownie
-        Podobny skrypt użyć do przycisku odśwież???
         :return:
         """
 
@@ -70,9 +92,6 @@ class App(tk.Tk):
         data = select_data(sql)
 
         data = pd.DataFrame(data[1], columns=data[0]).values.tolist()
-
-        for link, last_check_date in data:
-            print(f"{link} - {last_check_date}")
 
         for link, last_check_date in data:
             last_check_date = datetime.strptime(last_check_date, '%Y-%m-%d %H:%M:%S').date()
@@ -183,6 +202,11 @@ class App(tk.Tk):
 
         tk.Button(enter_site_lf, text="Zatwierdź", command=self.add_site)\
             .grid(row=0, column=1, padx=2, pady=2, ipadx=2, ipady=2)
+
+        # Przycisk odśwież: --------------------------------------------------------------------------------------------
+        # Muszę zmienić położenie tego przycisku. Może w pasku narzędzi?
+        tk.Button(enter_site_lf, text="Odśwież", command=self.refresh_prices)\
+            .grid(row=0, column=2, padx=2, pady=2, ipadx=2, ipady=2)
 
         # PASEK Z PRZYCISKAMI??? =======================================================================================
 
